@@ -3,8 +3,6 @@
 # **WARNING: DO NOT USE THIS**
 **This project was created for the [Terminal Code Jam](https://togglebit.io/posts/terminal-game-jam/) hosted by [Togglebit](https://www.twitch.tv/togglebit) and contains intentional bugs that will make your life hell if you try to use this for actual osdev.**
 
-I also just now realized that it says "game-jam" in the url, so I might have missinterpreted the exercise. ^^
-
 ## Description
 
 WAC is an address calculator which can be used to calculate offsets and do bit manipulations. It only supports one number type (unsigned int64) and only shows output in hex.
