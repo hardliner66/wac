@@ -1,0 +1,12 @@
+[package]
+name = "wac"
+version = "1.0.0"
+edition = "2018"
+
+[build-dependencies]
+lalrpop = "0.19.6"
+
+[dependencies]
+lalrpop-util = "0.19.6"
+rand = "0.8.4"
+regex = "1"

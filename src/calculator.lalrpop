@@ -1,0 +1,155 @@
+use std::str::FromStr;
+use crate::ast::{Constant, Expr, Help, Opcode, PrefixOpcode, PostfixOpcode};
+
+grammar(success_rate: f32);
+
+pub Command: Box<Expr> = {
+	"show" <e:Expr> => Box::new(Expr::Show(e)),
+	"?" <e:Help> => Box::new(Expr::Help(e)),
+	"help" <e:Help> => Box::new(Expr::Help(e)),
+	"?" => Box::new(Expr::Help(Help::Help)),
+	"help" => Box::new(Expr::Help(Help::Help)),
+	r"(?i)exit" => std::process::exit(0),
+	r"(?i)quit" => std::process::exit(0),
+	r"(?i)stop" => std::process::exit(0),
+	r"(?i)halt" => std::process::exit(0),
+	r"(?i):q" => std::process::exit(0),
+	r"(?i):cq" => std::process::exit(-1),
+	Expr,
+}
+
+pub Help: Help = {
+	ExprOp => Help::Opcode(<>),
+	FactorOp => Help::Opcode(<>),
+	PrefixOp => Help::PrefixOpcode(<>),
+	PostfixOp => Help::PostfixOpcode(<>),
+	Num => Help::Number(<>),
+	r"(?i)show" => Help::Show,
+	r"(?i)min" => Help::Constant(Constant::Min),
+	r"(?i)max" => Help::Constant(Constant::Max),
+	r"(?i)c" => Help::Constant(Constant::C),
+}
+
+pub Expr: Box<Expr> = { // (1)
+    Expr ExprOp Factor => Box::new(Expr::Op(<>)), // (2)
+    Factor,
+};
+
+ExprOp: Opcode = { // (3)
+    "+" => Opcode::Add,
+    "-" => Opcode::Sub,
+	"<<" => Opcode::LShift,
+	">>" => Opcode::RShift,
+	"|" => Opcode::Or,
+	"&" => Opcode::And,
+	"xor" => Opcode::Xor,
+};
+
+Factor: Box<Expr> = {
+    Factor FactorOp Prefix => Box::new(Expr::Op(<>)),
+	Prefix,
+};
+
+FactorOp: Opcode = {
+    "*" => Opcode::Mul,
+    "/" => Opcode::Div,
+    "%" => Opcode::Mod,
+	"^" => Opcode::Pow,
+};
+
+Prefix: Box<Expr> = {
+	PrefixOp Term => Box::new(Expr::Prefix(<>)),
+    Postfix,
+}
+
+PrefixOp: PrefixOpcode = {
+    "~" => PrefixOpcode::Not,
+};
+
+Postfix: Box<Expr> = {
+	Term PostfixOp => Box::new(Expr::Postfix(<>)),
+    Term,
+}
+
+PostfixOp: PostfixOpcode = {
+    "++" => PostfixOpcode::Inc,
+    "--" => PostfixOpcode::Dec,
+    "!" => PostfixOpcode::Factorial,
+};
+
+Term: Box<Expr> = {
+    Num => Box::new(Expr::Number(<>)),
+	r"(?i)max" => Box::new(Expr::Number(u64::MAX)),
+	r"(?i)min" => Box::new(Expr::Number(0)),
+	r"(?i)c" => Box::new(Expr::Number(299792458)),
+    "(" <Expr> ")",
+};
+
+Num: u64 = {
+    Bin,
+    Oct,
+    Hex,
+    Dec,
+    <v:Bin> <u:Unit> => v * u,
+    <v:Oct> <u:Unit> => v * u,
+    <v:Hex> <u:Unit> => v * u,
+    <v:Dec> <u:Unit> => v * u,
+    <v:Bin> <s:UnitPrefix> <u:Unit> => v * u * s,
+    <v:Oct> <s:UnitPrefix> <u:Unit> => v * u * s,
+    <v:Hex> <s:UnitPrefix> <u:Unit> => v * u * s,
+    <v:Dec> <s:UnitPrefix> <u:Unit> => v * u * s,
+}
+
+Unit: u64 = {
+	"b" => 1,
+	"bit" => 1,
+	"B" => 8,
+	"Byte" => 8,
+}
+
+UnitPrefix: u64 = {
+	r"(?i)k" =>  1000_u64,
+	r"(?i)ki" => 1024_u64,
+	r"(?i)m" =>  1000_u64.pow(2),
+	r"(?i)mi" => 1024_u64.pow(2),
+	r"(?i)g" =>  1000_u64.pow(3),
+	r"(?i)gi" => 1024_u64.pow(3),
+	r"(?i)t" =>  1000_u64.pow(4),
+	r"(?i)ti" => 1024_u64.pow(4),
+	r"(?i)e" =>  1000_u64.pow(5),
+	r"(?i)ei" => 1024_u64.pow(5),
+	r"(?i)p" =>  1000_u64.pow(6),
+	r"(?i)pi" => 1024_u64.pow(6),
+	r"(?i)z" =>  1000_u64.pow(7),
+	r"(?i)zi" => 1024_u64.pow(7),
+	r"(?i)y" =>  1000_u64.pow(8),
+	r"(?i)yi" => 1024_u64.pow(8),
+}
+
+Bin: u64 = {
+    <s:r"0b[0-1]+"> => if rand::random::<f32>() < success_rate {
+						u64::from_str_radix(&s[2..], 2).unwrap()
+					} else {
+						if rand::random() {
+							u64::from_str_radix(&s[2..], 8).unwrap()
+						} else {
+							u64::from_str_radix(&s[2..], 16).unwrap()
+						}
+					},
+};
+
+Oct: u64 = {
+    <s:r"0o[0-7]+"> => if rand::random::<f32>() < success_rate {
+						u64::from_str_radix(&s[2..], 8).unwrap()
+					} else {
+						u64::from_str_radix(&s[2..], 16).unwrap()
+					},
+};
+
+Hex: u64 = {
+    <s:r"0x[0-9a-fA-F]+"> => u64::from_str_radix(&s[2..], 16).unwrap(),
+};
+
+Dec: u64 = {
+    r"[0-9]+" => u64::from_str(<>).unwrap(),
+};
