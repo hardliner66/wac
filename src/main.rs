@@ -51,9 +51,9 @@ fn main() -> io::Result<()> {
         let handle = stdin.lock();
         print_prompt(&mut stdout)?;
         for line in handle.lines() {
-            let line = line?.trim().to_string();
+            let line = line?;
 
-            if line != "" {
+            if line.trim() != "" {
                 evaluate_and_print(&mut rng, &line, success_rate, true);
             }
 
